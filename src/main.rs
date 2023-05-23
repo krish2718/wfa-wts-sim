@@ -91,6 +91,7 @@ fn send_one_cmd(mut stream: TcpStream, input: &String)
        // Append 3 dummy bytes to the end of the input (required by CA)
        let input = format!("{}{}", input, "   ");
        let mut resp = [0; 1024];
+       println!("Sending command: {}", input);
        let bytes_sent = stream.write(input.as_bytes()).unwrap();
        log::debug!("Bytes sent: {}", bytes_sent);
 
@@ -111,7 +112,7 @@ fn send_one_cmd(mut stream: TcpStream, input: &String)
            let bytes_read = bytes_read.unwrap();
            log::debug!("Bytes read: {}", bytes_read);
            let resp = String::from_utf8_lossy(&resp);
-           println!("Response: {}", resp);
+           println!("   Response: {}", resp);
            if resp.contains("COMPLETE") {
                break;
            }
@@ -166,6 +167,9 @@ fn file_input_cli(stream: TcpStream, file: Option<std::path::PathBuf>)
             return;
         }
     }
+
+    println!("Processing file input: {}", file.unwrap().display());
+    println!("==========================\n");
 
     // Read each line from the file and send to CA
     for line in input.unwrap().lines() {
