@@ -31,4 +31,4 @@ Options:
 
 ## Known issues
 
-* Implement ctrl-c handling (currently this causes the program to exit ungracefully)
+None

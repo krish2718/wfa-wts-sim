@@ -57,8 +57,15 @@ fn main() {
     // Send command to CA, if exit or ctrl-c break
     loop {
         let mut resp = [0; 1024];
-
-        let input = cmd.clone().prompt().unwrap();
+        let input = cmd.clone().prompt();
+        match input {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Error reading input: {}", e);
+                return;
+            }
+        }
+        let input = input.unwrap();
         log::debug!("Input: {}", input);
         if input.to_lowercase() == "exit" {
             break;
