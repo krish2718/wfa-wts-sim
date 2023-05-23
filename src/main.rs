@@ -32,6 +32,56 @@ fn connect_to_ca(ca: String, port: u16) -> Result<TcpStream, std::io::Error> {
     return stream;
 }
 
+fn interactive_cli(mut stream: TcpStream)
+{
+   // Open an interactive prompt in a loop
+   let cmd = Text::new("Enter command: ");
+   // Send command to CA, if exit or ctrl-c break
+   loop {
+       let mut resp = [0; 1024];
+       let input = cmd.clone().prompt();
+       match input {
+           Ok(_) => {}
+           Err(e) => {
+               println!("Error reading input: {}", e);
+               return;
+           }
+       }
+       let input = input.unwrap();
+       log::debug!("Input: {}", input);
+       if input.to_lowercase() == "exit" {
+           break;
+       }
+       // Append 3 dummy bytes to the end of the input (required by CA)
+       let input = format!("{}{}", input, "   ");
+       let bytes_sent = stream.write(input.as_bytes()).unwrap();
+       log::debug!("Bytes sent: {}", bytes_sent);
+
+       loop {
+           let bytes_read = stream.read(&mut resp);
+           match bytes_read {
+               Ok(bytes_read) => {
+                   if bytes_read == 0 {
+                       println!("Connection closed by CA");
+                       return;
+                   }
+               }
+               Err(e) => {
+                   println!("Error reading from CA: {}", e);
+                   return;
+               }
+           }
+           let bytes_read = bytes_read.unwrap();
+           log::debug!("Bytes read: {}", bytes_read);
+           let resp = String::from_utf8_lossy(&resp);
+           println!("Response: {}", resp);
+           if resp.contains("COMPLETE") {
+               break;
+           }
+       }
+   }
+}
+
 fn main() {
     env_logger::init();
 
@@ -48,54 +98,11 @@ fn main() {
             return;
         }
     }
-    let mut stream = stream.unwrap();
+    let stream = stream.unwrap();
     stream
         .set_read_timeout(Some(std::time::Duration::from_secs(RESP_TIMEOUT_S)))
         .unwrap();
-    // Open an interactive prompt in a loop
-    let cmd = Text::new("Enter command: ");
-    // Send command to CA, if exit or ctrl-c break
-    loop {
-        let mut resp = [0; 1024];
-        let input = cmd.clone().prompt();
-        match input {
-            Ok(_) => {}
-            Err(e) => {
-                println!("Error reading input: {}", e);
-                return;
-            }
-        }
-        let input = input.unwrap();
-        log::debug!("Input: {}", input);
-        if input.to_lowercase() == "exit" {
-            break;
-        }
-        // Append 3 dummy bytes to the end of the input (required by CA)
-        let input = format!("{}{}", input, "   ");
-        let bytes_sent = stream.write(input.as_bytes()).unwrap();
-        log::debug!("Bytes sent: {}", bytes_sent);
 
-        loop {
-            let bytes_read = stream.read(&mut resp);
-            match bytes_read {
-                Ok(bytes_read) => {
-                    if bytes_read == 0 {
-                        println!("Connection closed by CA");
-                        return;
-                    }
-                }
-                Err(e) => {
-                    println!("Error reading from CA: {}", e);
-                    return;
-                }
-            }
-            let bytes_read = bytes_read.unwrap();
-            log::debug!("Bytes read: {}", bytes_read);
-            let resp = String::from_utf8_lossy(&resp);
-            println!("Response: {}", resp);
-            if resp.contains("COMPLETE") {
-                break;
-            }
-        }
-    }
+    interactive_cli(stream);
+
 }
