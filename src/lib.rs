@@ -1,5 +1,5 @@
 // Copyright (c) 2023 Chaitanya Tata
-// License: MIT
+// SPDX-License-Identifier: MIT
 use clap::Parser;
 use inquire::Text;
 use log;

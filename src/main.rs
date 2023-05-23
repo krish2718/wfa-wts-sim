@@ -1,5 +1,5 @@
 // Copyright (c) 2023 Chaitanya Tata
-// License: MIT
+// SPDX-License-Identifier: MIT
 
 use env_logger;
 use wfa_wts_sim::{parse_args, connect_to_ca, interactive_cli, file_input_cli};
