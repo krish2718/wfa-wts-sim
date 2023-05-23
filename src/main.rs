@@ -23,6 +23,11 @@ struct Cli {
     cmd_file: Option<std::path::PathBuf>,
 }
 
+struct InternalCmd {
+    key: String,
+    value: String,
+}
+
 /// Connect to CA and return TcpStream
 fn connect_to_ca(ca: String, port: u16) -> Result<TcpStream, std::io::Error> {
     let addr = format!("{}:{}", ca, port);
@@ -34,7 +39,54 @@ fn connect_to_ca(ca: String, port: u16) -> Result<TcpStream, std::io::Error> {
     return stream;
 }
 
-fn send_one_cmd(mut stream: TcpStream, input: String)
+fn parse_internal_cmd(cmd: &String, mut parsed_cmd: &mut InternalCmd) -> bool
+{
+    let cmd = cmd.to_lowercase();
+    // Format is: !key!value
+    if cmd.starts_with("!") && cmd.ends_with("!") {
+        let cmd = cmd.trim_start_matches("!");
+        let cmd = cmd.trim_end_matches("!");
+        let cmd: Vec<&str> = cmd.split("!").collect();
+        if cmd.len() == 2 {
+            parsed_cmd.key = cmd[0].to_string();
+            parsed_cmd.value = cmd[1].to_string();
+            return true;
+        }
+    }
+
+    return false;
+}
+
+fn process_internal_cmd(cmd: &String) -> bool
+{
+    let mut int_cmd: InternalCmd = InternalCmd {
+        key: String::new(),
+        value: String::new(),
+    };
+
+    let parsed: bool = parse_internal_cmd(&cmd, &mut int_cmd);
+
+    if !parsed {
+        return false;
+    }
+
+    log::debug!("Internal command: {} {}", int_cmd.key, int_cmd.value);
+    match  int_cmd.key.as_str() {
+        "sleep" => {
+            println!("Internal command: Sleeping for {} seconds\n", int_cmd.value);
+            let sleep_time: u64 = int_cmd.value.parse().unwrap();
+            std::thread::sleep(std::time::Duration::from_secs(sleep_time));
+            return true;
+        }
+        _ => {
+            log::warn!("Unknown internal command: {}", int_cmd.key);
+            return false;
+        }
+    }
+}
+
+
+fn send_one_cmd(mut stream: TcpStream, input: &String)
 {
        // Append 3 dummy bytes to the end of the input (required by CA)
        let input = format!("{}{}", input, "   ");
@@ -87,7 +139,11 @@ fn interactive_cli(stream: TcpStream)
            break;
        }
 
-       send_one_cmd(stream.try_clone().unwrap(), input);
+       let int_cmd: bool = process_internal_cmd(&input);
+       if int_cmd {
+         continue;
+       }
+       send_one_cmd(stream.try_clone().unwrap(), &input);
    }
 }
 
@@ -112,8 +168,12 @@ fn file_input_cli(stream: TcpStream, file: Option<std::path::PathBuf>)
     }
 
     // Read each line from the file and send to CA
-    for line in input.lines() {
-        send_one_cmd(stream.try_clone().unwrap(), line.to_string());
+    for line in input.unwrap().lines() {
+        let int_cmd: bool = process_internal_cmd(&line.to_string());
+        if int_cmd {
+            continue;
+        }
+        send_one_cmd(stream.try_clone().unwrap(), &line.to_string());
     }
 }
 
