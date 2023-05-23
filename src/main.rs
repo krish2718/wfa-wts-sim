@@ -15,10 +15,12 @@ const RESP_TIMEOUT_S: u64 = 30;
 /// IP address and port of CA
 #[derive(Parser)]
 struct Cli {
-    #[clap(short, long)]
+    #[clap(short = 'c', long = "ca")]
     ca: String,
-    #[clap(short, long)]
+    #[clap(short = 'p', long = "port")]
     port: u16,
+    #[clap(short = 'f', long = "cmd-file")]
+    cmd_file: Option<std::path::PathBuf>,
 }
 
 /// Connect to CA and return TcpStream
@@ -32,28 +34,11 @@ fn connect_to_ca(ca: String, port: u16) -> Result<TcpStream, std::io::Error> {
     return stream;
 }
 
-fn interactive_cli(mut stream: TcpStream)
+fn send_one_cmd(mut stream: TcpStream, input: String)
 {
-   // Open an interactive prompt in a loop
-   let cmd = Text::new("Enter command: ");
-   // Send command to CA, if exit or ctrl-c break
-   loop {
-       let mut resp = [0; 1024];
-       let input = cmd.clone().prompt();
-       match input {
-           Ok(_) => {}
-           Err(e) => {
-               println!("Error reading input: {}", e);
-               return;
-           }
-       }
-       let input = input.unwrap();
-       log::debug!("Input: {}", input);
-       if input.to_lowercase() == "exit" {
-           break;
-       }
        // Append 3 dummy bytes to the end of the input (required by CA)
        let input = format!("{}{}", input, "   ");
+       let mut resp = [0; 1024];
        let bytes_sent = stream.write(input.as_bytes()).unwrap();
        log::debug!("Bytes sent: {}", bytes_sent);
 
@@ -79,7 +64,57 @@ fn interactive_cli(mut stream: TcpStream)
                break;
            }
        }
+}
+
+
+fn interactive_cli(stream: TcpStream)
+{
+   // Open an interactive prompt in a loop
+   let cmd = Text::new("Enter command: ");
+   // Send command to CA, if exit or ctrl-c break
+   loop {
+       let input = cmd.clone().prompt();
+       match input {
+           Ok(_) => {}
+           Err(e) => {
+               println!("Error reading input: {}", e);
+               return;
+           }
+       }
+       let input = input.unwrap();
+       log::debug!("Input: {}", input);
+       if input.to_lowercase() == "exit" {
+           break;
+       }
+
+       send_one_cmd(stream.try_clone().unwrap(), input);
    }
+}
+
+fn file_input_cli(stream: TcpStream, file: Option<std::path::PathBuf>)
+{
+    let input ;
+    match &file {
+        Some(file) => {
+            input = std::fs::read_to_string(file);
+            match input {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Error reading file: {}", e);
+                    return;
+                }
+            }
+        }
+        None => {
+            println!("No file specified");
+            return;
+        }
+    }
+
+    // Read each line from the file and send to CA
+    for line in input.lines() {
+        send_one_cmd(stream.try_clone().unwrap(), line.to_string());
+    }
 }
 
 fn main() {
@@ -103,6 +138,10 @@ fn main() {
         .set_read_timeout(Some(std::time::Duration::from_secs(RESP_TIMEOUT_S)))
         .unwrap();
 
-    interactive_cli(stream);
+    if args.cmd_file == None {
+        interactive_cli(stream);
+    } else {
+        file_input_cli(stream, args.cmd_file);
+    }
 
 }

@@ -26,7 +26,8 @@ Usage: wfa-wts-sim --ca <CA> --port <PORT>
 Options:
   -c, --ca <CA>
   -p, --port <PORT>
-  -h, --help         Print help
+  -f, --cmd-file <CMD_FILE>
+  -h, --help                 Print help
 ```
 
 ## Known issues
