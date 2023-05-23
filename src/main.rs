@@ -69,7 +69,20 @@ fn main() {
         log::debug!("Bytes sent: {}", bytes_sent);
 
         loop {
-            let bytes_read = stream.read(&mut resp).unwrap();
+            let bytes_read = stream.read(&mut resp);
+            match bytes_read {
+                Ok(bytes_read) => {
+                    if bytes_read == 0 {
+                        println!("Connection closed by CA");
+                        return;
+                    }
+                }
+                Err(e) => {
+                    println!("Error reading from CA: {}", e);
+                    return;
+                }
+            }
+            let bytes_read = bytes_read.unwrap();
             log::debug!("Bytes read: {}", bytes_read);
             let resp = String::from_utf8_lossy(&resp);
             println!("Response: {}", resp);
