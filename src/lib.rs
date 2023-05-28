@@ -22,12 +22,12 @@ pub struct Cli {
     pub cmd_file: Option<std::path::PathBuf>,
 }
 
-struct InternalCmd {
-    key: String,
-    value: String,
+pub struct InternalCmd {
+    pub key: String,
+    pub value: String,
 }
 
-fn parse_internal_cmd(cmd: &String, mut parsed_cmd: &mut InternalCmd) -> bool
+pub fn parse_internal_cmd(cmd: &String, mut parsed_cmd: &mut InternalCmd) -> bool
 {
     let cmd = cmd.to_lowercase();
     // Format is: !key!value
@@ -74,30 +74,37 @@ fn process_internal_cmd(cmd: &String) -> bool
 }
 
 
-fn send_one_cmd(mut stream: TcpStream, input: &String)
+pub fn send_one_cmd(mut stream: impl Read + Write + Unpin, input: &String) -> i64
 {
        // Append 3 dummy bytes to the end of the input (required by CA)
        let input = format!("{}{}", input, "   ");
+       let mut bytes_read: i64;
+       let mut read_status;
        let mut resp = [0; 1024];
        println!("Sending command: {}", input);
        let bytes_sent = stream.write(input.as_bytes()).unwrap();
        log::debug!("Bytes sent: {}", bytes_sent);
 
+       if bytes_sent == 0 {
+           println!("Connection closed by CA");
+           return -1;
+       }
+
        loop {
-           let bytes_read = stream.read(&mut resp);
-           match bytes_read {
-               Ok(bytes_read) => {
-                   if bytes_read == 0 {
+        read_status = stream.read(&mut resp);
+           match read_status {
+               Ok(read_status) => {
+                   if read_status == 0 {
                        println!("Connection closed by CA");
-                       return;
+                       return -1;
                    }
                }
                Err(e) => {
                    println!("Error reading from CA: {}", e);
-                   return;
+                   return -1;
                }
            }
-           let bytes_read = bytes_read.unwrap();
+           bytes_read = read_status.unwrap() as i64;
            log::debug!("Bytes read: {}", bytes_read);
            let resp = String::from_utf8_lossy(&resp);
            println!("   Response: {}", resp);
@@ -105,6 +112,8 @@ fn send_one_cmd(mut stream: TcpStream, input: &String)
                break;
            }
        }
+
+       return bytes_read;
 }
 
 /// Public functions
@@ -118,6 +127,7 @@ pub fn parse_args() -> Cli
 
 /// Connect to CA and return TcpStream
 pub fn connect_to_ca(ca: String, port: u16) -> Result<TcpStream, std::io::Error> {
+    log::debug!("Connecting to CA: {}:{}", ca, port);
     let addr = format!("{}:{}", ca, port);
     // Connect to CA with timeout
     let stream = TcpStream::connect_timeout(

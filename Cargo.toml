@@ -8,5 +8,7 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
 env_logger = "0.10.0"
+futures = "0.3.28"
 inquire = "0.6.2"
 log = "0.4.17"
+mockstream = "0.0.3"
