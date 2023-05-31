@@ -30,6 +30,26 @@ Options:
   -h, --help                 Print help
 ```
 
+## Unit tests and coverage
+
+This application has few unit tests. To run the unit tests, use the following command
+
+```shell
+    $ cargo test
+```
+
+Code coverage is generated using `cargo-llvm-cov` crate.
+
+After running the unit tests, the code coverage report can be generated using the following command
+
+```shell
+    $ cargo test
+    $ cargo llvm-cov
+    $ cargo llvm-cov --open
+```
+
+See [Usage](https://github.com/taiki-e/cargo-llvm-cov#usage) for more details.
+
 ## Known issues
 
 None

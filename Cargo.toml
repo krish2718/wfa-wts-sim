@@ -12,3 +12,8 @@ futures = "0.3.28"
 inquire = "0.6.2"
 log = "0.4.17"
 mockstream = "0.0.3"
+
+[build]
+# Build the profiler runtime (required when compiling with options that depend
+# on this runtime, such as `-C profile-generate` or `-C instrument-coverage`).
+profiler = true
