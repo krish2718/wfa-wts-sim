@@ -1,5 +1,7 @@
 [package]
 name = "wfa-wts-sim"
+description = "A tool for simulating the WFA WTS for testing WFA devices (Testbed and DUT)"
+license = "MIT"
 version = "0.1.0"
 edition = "2021"
 
