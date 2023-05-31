@@ -1,5 +1,9 @@
 # WFA WTS simulator
 
+[![crates.io](https://img.shields.io/crates/v/wfa-wts-sim?style=flat-square&logo=rust)](https://crates.io/crates/wfa-wts-sim)
+[![license](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue?style=flat-square)](#license)
+[![build status](https://img.shields.io/github/actions/workflow/status/krish2718/wfa-wts-sim/rust.yml?branch=main&style=flat-square&logo=github)](https://github.com/krish2718/wfa-wts-sim/actions)
+
 WTS simulator for unit test CA + DUT by running individual command through an interactive shell.
 
 This is written in Rust and uses cargo as the build system.
